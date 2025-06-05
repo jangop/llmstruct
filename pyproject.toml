@@ -1,0 +1,17 @@
+[project]
+name = "llmstruct"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "pydantic>=2.11.5",
+]
+
+[tool.ruff.lint]
+select = ["F","UP","B","SIM","I"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+]
