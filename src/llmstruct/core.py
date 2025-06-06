@@ -121,7 +121,7 @@ def extract_json_from_text(text: str, model_type: type[M]) -> Result[M]:
                                 title=model_type.__name__,
                                 line_errors=[
                                     {
-                                        "type": "dict_expected",
+                                        "type": "dict_type",
                                         "loc": (item_idx,),
                                         "input": item,
                                     }
