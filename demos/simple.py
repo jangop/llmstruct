@@ -1,40 +1,45 @@
 from enum import StrEnum
+from typing import Annotated
 
+from annotated_types import Len
 from anthropic import Anthropic
 from pydantic import BaseModel
 
 from llmstruct import extract_json_from_text
 
 
-class Alignment(StrEnum):
-    """Represents a character's moral alignment."""
+class Power(StrEnum):
+    """Represents a hero's power."""
 
-    CHAOTIC_GOOD = "Chaotic Good"
-    NEUTRAL_GOOD = "Neutral Good"
-    LAWFUL_GOOD = "Lawful Good"
-    CHAOTIC_NEUTRAL = "Chaotic Neutral"
-    NEUTRAL = "Neutral"
-    LAWFUL_NEUTRAL = "Lawful Neutral"
-    CHAOTIC_EVIL = "Chaotic Evil"
-    NEUTRAL_EVIL = "Neutral Evil"
-    LAWFUL_EVIL = "Lawful Evil"
+    FLIGHT = "Flight"
+    SUPER_STRENGTH = "Super Strength"
+    SUPER_SPEED = "Super Speed"
+    INVISIBILITY = "Invisibility"
+    TELEPORTATION = "Teleportation"
+    TIME_CONTROL = "Time Control"
+    TELEKINESIS = "Telekinesis"
 
 
-class Character(BaseModel):
-    """Represents a character in a fantasy role-playing game."""
+class Superhero(BaseModel):
+    """A basic superhero."""
 
-    name: str
+    real_name: str
+    cover_name: str
     origin: str
-    interests: list[str]
-    alignment: Alignment
+    interests: tuple[str, ...]
+    powers: Annotated[tuple[Power, ...], Len(min_length=1, max_length=3)]
 
 
 def main():
-    """A simple demonstration of the library's capabilities."""
     client = Anthropic()
 
-    print("--- Simple Demo ---")
-    print("Asking Anthropic for a character profile...")
+    prompt = f"""
+    Generate two random superheroes.
+    Explain how they are similar and different, and how they met.
+    Then, write the heroes' data as a JSON array,
+    where each object conforms to this schema:
+    {Superhero.model_json_schema()}
+    """
 
     message = client.messages.create(
         model="claude-3-5-haiku-latest",
@@ -42,25 +47,22 @@ def main():
         messages=[
             {
                 "role": "user",
-                "content": f"Please generate a random character profile for a fantasy RPG. The JSON should conform to this pydantic model: {Character.model_json_schema()}",
+                "content": prompt,
             }
         ],
     )
 
     response_text = message.content[0].text
-    print(f"Input text from LLM:\n{response_text}")
 
-    result = extract_json_from_text(response_text, Character)
+    result = extract_json_from_text(response_text, Superhero)
 
-    print(f"\nExtraction status: {result.status.value}")
-    if result.parsed_objects:
-        print("Parsed objects:")
-        for obj in result.parsed_objects:
-            print(f"- {obj.model_dump_json(indent=2)}")
-    else:
-        print("No objects were parsed.")
+    if not result.parsed_objects:
+        print("No objects could be parsed from the response:")
+        print(response_text)
+        return
 
-    print("-" * 20)
+    for obj in result.parsed_objects:
+        print(obj.model_dump_json(indent=2))
 
 
 if __name__ == "__main__":
