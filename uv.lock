@@ -181,7 +181,7 @@ dev = [
 requires-dist = [
     { name = "anthropic", marker = "extra == 'demos'", specifier = ">=0.28.0" },
     { name = "httpx", marker = "extra == 'demos'", specifier = ">=0.27.0" },
-    { name = "pydantic", specifier = ">=2.11.5" },
+    { name = "pydantic", specifier = ">=2.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3.5" },
     { name = "tenacity", marker = "extra == 'demos'", specifier = ">=9.1.2" },
 ]
