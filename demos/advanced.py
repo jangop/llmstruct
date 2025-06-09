@@ -5,7 +5,7 @@ from anthropic import Anthropic
 from pydantic import BaseModel, Field
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 
-from llmstruct import ExtractionStatus, extract_json_from_text
+from llmstruct import ExtractionStatus, extract_structure_from_text
 
 
 class ProductSummary(BaseModel):
@@ -70,7 +70,7 @@ def get_product_summary(client: Anthropic, product_data: dict) -> ProductSummary
         .text
     )
 
-    result = extract_json_from_text(message, ProductSummary)
+    result = extract_structure_from_text(message, ProductSummary)
 
     if result.status != ExtractionStatus.SUCCESS:
         print(f"Extraction failed. Status: {result.status.value}")

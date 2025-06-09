@@ -1,3 +1,3 @@
-from .core import ExtractionStatus, Result, extract_json_from_text
+from .core import ExtractionStatus, Result, extract_structure_from_text
 
-__all__ = ["extract_json_from_text", "ExtractionStatus", "Result"]
+__all__ = ["extract_structure_from_text", "ExtractionStatus", "Result"]

@@ -5,7 +5,7 @@ from annotated_types import Len
 from anthropic import Anthropic
 from pydantic import BaseModel
 
-from llmstruct import extract_json_from_text
+from llmstruct import extract_structure_from_text
 
 
 class Power(StrEnum):
@@ -54,7 +54,7 @@ def main():
 
     response_text = message.content[0].text
 
-    result = extract_json_from_text(response_text, Superhero)
+    result = extract_structure_from_text(response_text, Superhero)
 
     if not result.parsed_objects:
         print("No objects could be parsed from the response:")

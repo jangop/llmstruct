@@ -1,7 +1,7 @@
 import pytest
 from pydantic import BaseModel, RootModel, ValidationError
 
-from llmstruct import ExtractionStatus, extract_json_from_text
+from llmstruct import ExtractionStatus, extract_structure_from_text
 
 
 class User(BaseModel):
@@ -168,7 +168,7 @@ TEST_CASES = [
 @pytest.mark.parametrize("text,model,expected_status,expected_count", TEST_CASES)
 def test_extract_json_from_text(text, model, expected_status, expected_count):
     """Test JSON extraction from various text inputs."""
-    result = extract_json_from_text(text, model)
+    result = extract_structure_from_text(text, model)
 
     # Check status
     assert result.status == expected_status, (
@@ -222,7 +222,7 @@ def test_user_list_root_model_invalid():
 def test_extract_json_user_object():
     """Test extracting a single User object from text."""
     text = 'Here is a user: { "id": 42, "name": "TestUser", "is_active": false }'
-    result = extract_json_from_text(text, User)
+    result = extract_structure_from_text(text, User)
 
     assert result.status == ExtractionStatus.SUCCESS
     assert len(result.parsed_objects) == 1
@@ -239,7 +239,7 @@ def test_extract_json_product_array():
         {"product_id": "A001", "price": 19.99, "tags": ["electronics"]},
         {"product_id": "B002", "price": 29.99}
     ]"""
-    result = extract_json_from_text(text, Product)
+    result = extract_structure_from_text(text, Product)
 
     assert result.status == ExtractionStatus.SUCCESS
     assert len(result.parsed_objects) == 2
@@ -258,7 +258,7 @@ def test_extract_json_product_array():
 def test_extract_json_no_valid_json():
     """Test that extraction fails gracefully when no valid JSON is found."""
     text = "This is just plain text with no JSON whatsoever."
-    result = extract_json_from_text(text, User)
+    result = extract_structure_from_text(text, User)
 
     assert result.status == ExtractionStatus.FAILURE
     assert len(result.parsed_objects) == 0
@@ -267,7 +267,7 @@ def test_extract_json_no_valid_json():
 def test_extract_json_malformed_json():
     """Test that extraction fails gracefully with malformed JSON."""
     text = 'Malformed: { "id": 1, "name": "Incomplete"'
-    result = extract_json_from_text(text, User)
+    result = extract_structure_from_text(text, User)
 
     assert result.status == ExtractionStatus.FAILURE
     assert len(result.parsed_objects) == 0
@@ -276,7 +276,7 @@ def test_extract_json_malformed_json():
 def test_extract_json_wrong_schema():
     """Test that extraction fails when JSON doesn't match the model schema."""
     text = 'Wrong schema: { "user_id": 1, "username": "Alice" }'
-    result = extract_json_from_text(text, User)
+    result = extract_structure_from_text(text, User)
 
     assert result.status == ExtractionStatus.FAILURE
     assert len(result.parsed_objects) == 0

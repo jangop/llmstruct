@@ -76,7 +76,7 @@ def _extract_balanced_segment(
     return None  # Unbalanced
 
 
-def extract_json_from_text(text: str, model_type: type[M]) -> Result[M]:
+def extract_structure_from_text(text: str, model_type: type[M]) -> Result[M]:
     """
     Extracts JSON (object or array of objects) from plain text and parses it
     using the provided Pydantic model.

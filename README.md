@@ -42,7 +42,7 @@ Here is a quick overview of how to use `llmstruct`:
 ```python
 from pydantic import BaseModel
 from anthropic import Anthropic
-from llmstruct import extract_json_from_text
+from llmstruct import extract_structure_from_text
 
 # Define your data structure using Pydantic
 class Superhero(BaseModel):
@@ -74,7 +74,7 @@ message = client.messages.create(
 
 
 # Extract the JSON from the response text
-result = extract_json_from_text(message, Superhero)
+result = extract_structure_from_text(message, Superhero)
 
 # Now you can use the parsed and validated objects
 for hero in result.parsed_objects:
