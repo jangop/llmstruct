@@ -5,7 +5,7 @@ from annotated_types import Len
 from anthropic import Anthropic
 from pydantic import BaseModel
 
-from llmstruct import extract_structure_from_text
+from llmstruct import ExtractionError, ValidationError, extract_structure_from_text
 
 
 class Power(StrEnum):
@@ -54,15 +54,14 @@ def main():
 
     response_text = message.content[0].text
 
-    result = extract_structure_from_text(response_text, Superhero)
-
-    if not result.parsed_objects:
-        print("No objects could be parsed from the response:")
+    try:
+        parsed_objects = extract_structure_from_text(response_text, Superhero)
+        for obj in parsed_objects:
+            print(obj.model_dump_json(indent=2))
+    except (ExtractionError, ValidationError) as e:
+        print(f"An error occurred during extraction or validation: {e}")
+        print("Response text:")
         print(response_text)
-        return
-
-    for obj in result.parsed_objects:
-        print(obj.model_dump_json(indent=2))
 
 
 if __name__ == "__main__":

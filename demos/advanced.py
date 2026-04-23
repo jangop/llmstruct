@@ -5,7 +5,7 @@ from anthropic import Anthropic
 from pydantic import BaseModel, Field
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 
-from llmstruct import ExtractionStatus, extract_structure_from_text
+from llmstruct import ExtractionError, ValidationError, extract_structure_from_text
 
 
 class ProductSummary(BaseModel):
@@ -39,7 +39,7 @@ def fetch_product_data(barcode: str) -> dict:
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_fixed(5),
-    retry=retry_if_exception_type(ValueError),
+    retry=retry_if_exception_type((ExtractionError, ValidationError)),
 )
 def get_product_summary(client: Anthropic, product_data: dict) -> ProductSummary:
     """
@@ -70,14 +70,13 @@ def get_product_summary(client: Anthropic, product_data: dict) -> ProductSummary
         .text
     )
 
-    result = extract_structure_from_text(message, ProductSummary)
-
-    if result.status != ExtractionStatus.SUCCESS:
-        print(f"Extraction failed. Status: {result.status.value}")
+    try:
+        parsed_objects = extract_structure_from_text(message, ProductSummary)
+        return parsed_objects[0]
+    except (ExtractionError, ValidationError) as e:
+        print(f"Extraction or validation failed: {e}")
         print(f"LLM Response:\n---\n{message}\n---")
-        raise ValueError("Extraction failed, retrying...")
-
-    return result.parsed_objects[0]
+        raise
 
 
 def main():
@@ -102,6 +101,8 @@ def main():
             print(f"\nProcess failed due to API rate limiting: {e}")
         else:
             print(f"\nProcess failed due to an HTTP error: {e}")
+    except (ExtractionError, ValidationError) as e:
+        print(f"\nProcess failed during extraction or validation: {e}")
     except ValueError as e:
         print(f"\nProcess failed: {e}")
     except Exception as e:

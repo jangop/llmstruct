@@ -1,34 +1,29 @@
 import json
-from dataclasses import dataclass, field
-from enum import StrEnum
-from typing import Generic, TypeVar
+from typing import TypeVar
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
+from pydantic import ValidationError as PydanticValidationError
 
 
-class ExtractionStatus(StrEnum):
-    """Status of the JSON extraction process."""
+class LLMStructException(Exception):
+    """Base exception for the llmstruct library."""
 
-    SUCCESS = "success"
-    FAILURE = "failure"
+    pass
+
+
+class ExtractionError(LLMStructException):
+    """Exception raised when JSON extraction from text fails."""
+
+    pass
+
+
+class ValidationError(LLMStructException):
+    """Exception raised when Pydantic validation of extracted data fails."""
+
+    pass
 
 
 M = TypeVar("M", bound=BaseModel)
-
-
-@dataclass
-class Result(Generic[M]):
-    """
-    Holds the result of the JSON extraction.
-
-    Attributes:
-        status: The status of the extraction (SUCCESS or FAILURE).
-        parsed_objects: A tuple of parsed Pydantic objects if successful,
-                        otherwise an empty tuple.
-    """
-
-    status: ExtractionStatus
-    parsed_objects: tuple[M, ...] = field(default_factory=tuple)
 
 
 def _extract_balanced_segment(
@@ -76,13 +71,15 @@ def _extract_balanced_segment(
     return None  # Unbalanced
 
 
-def extract_structure_from_text(text: str, model_type: type[M]) -> Result[M]:
+def extract_structure_from_text[M: BaseModel](
+    text: str, model_type: type[M]
+) -> tuple[M, ...]:
     """
     Extracts JSON (object or array of objects) from plain text and parses it
     using the provided Pydantic model.
     """
     if not text:
-        return Result(status=ExtractionStatus.FAILURE)
+        raise ExtractionError("Input text cannot be empty.")
 
     current_pos = 0
     while current_pos < len(text):
@@ -107,31 +104,18 @@ def extract_structure_from_text(text: str, model_type: type[M]) -> Result[M]:
                 # If parsing succeeds, try to validate with Pydantic model
                 if isinstance(loaded_json_data, dict):
                     parsed_model_instance = model_type.model_validate(loaded_json_data)
-                    return Result(
-                        status=ExtractionStatus.SUCCESS,
-                        parsed_objects=(parsed_model_instance,),
-                    )
+                    return (parsed_model_instance,)
                 elif isinstance(loaded_json_data, list):
                     parsed_objects_list: list[M] = []
                     for item_idx, item in enumerate(loaded_json_data):
                         if not isinstance(item, dict):
                             # This item cannot be a typical Pydantic model instance.
                             # The whole list candidate is considered a mismatch.
-                            raise ValidationError.from_exception_data(
-                                title=model_type.__name__,
-                                line_errors=[
-                                    {
-                                        "type": "dict_type",
-                                        "loc": (item_idx,),
-                                        "input": item,
-                                    }
-                                ],
+                            raise ValidationError(
+                                f"Item at index {item_idx} is not a dictionary."
                             )
                         parsed_objects_list.append(model_type.model_validate(item))
-                    return Result(
-                        status=ExtractionStatus.SUCCESS,
-                        parsed_objects=tuple(parsed_objects_list),
-                    )
+                    return tuple(parsed_objects_list)
                 else:
                     # Valid JSON, but not a dict or list (e.g., "string", number, true, null).
                     # This cannot be parsed into a Pydantic BaseModel instance.
@@ -139,11 +123,10 @@ def extract_structure_from_text(text: str, model_type: type[M]) -> Result[M]:
                     current_pos += len(json_candidate_str)
                     continue
 
-            except ValidationError:
+            except PydanticValidationError as e:
                 # Valid JSON structure (json.loads succeeded), but Pydantic validation failed.
-                # Skip this entire identified JSON segment and continue search from after it.
-                current_pos += len(json_candidate_str)
-                continue
+                # Re-raise as our custom ValidationError.
+                raise ValidationError("Pydantic validation failed.") from e
             except json.JSONDecodeError:
                 # _extract_balanced_segment found something like { ... } or [ ... ],
                 # but it wasn't syntactically valid JSON (e.g., "{ [ ... ] }").
@@ -160,4 +143,4 @@ def extract_structure_from_text(text: str, model_type: type[M]) -> Result[M]:
             # No explicit continue needed here as it's the end of the while loop body
             # and current_pos will be re-checked.
 
-    return Result(status=ExtractionStatus.FAILURE)
+    raise ExtractionError("No valid JSON structure found in the text.")
